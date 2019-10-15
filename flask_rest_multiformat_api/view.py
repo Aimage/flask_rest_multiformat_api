@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from flask import (Blueprint, abort, flash, json, jsonify, redirect,
-                   render_template, request, session, url_for)
+from flask import (abort, request, make_response)
 from flask.views import MethodView
-from .serialize import serialise, deserialise, apply_data_to_model
+from .serialize import serialise, apply_data_to_model
 from .utils import build_filter, loads_filters
 from .queries import get_single, get_many
 import json
@@ -12,6 +11,8 @@ from marshmallow import ValidationError
 from flask_login import login_required, current_user
 from sqlalchemy.orm import Query
 from .format import DATA_FORMATER
+from .exceptions import ApiException
+from flask_rest_multiformat_api.errors import ApiError, ObjectNotFoundError
 
 
 DEFAULT_FORMATER = DATA_FORMATER['jsonapi']
@@ -38,7 +39,25 @@ class BaseView(MethodView):
         for method in methods:
             if method not in allowed_method:
                 setattr(self, method, None)
+                
+    def dispatch_request(self, *args, **kwargs):
+        meth = getattr(self, request.method.lower(), None)
+        print('meth :', meth)
+#         print('methodes: ', lower_methods,request.method.lower() )
+        # If the request method is HEAD and we don't have a handler for it
+        # retry with GET.
+        if meth is None and request.method == 'HEAD':
+            meth = getattr(self, 'get', None)
 
+        if meth is None:
+            raise MethodNotAllowed('%s method not allowed.' %
+                                   request.method.lower()
+                                   )
+        assert meth is not None, 'Unimplemented method %r' % request.method
+        try:
+            return meth(*args, **kwargs)
+        except ApiException as e:
+            return self.data_formater.build_error_response(e.errors)
 
 class ModelDetailView(BaseView):
 #     decorators = [login_required]
@@ -52,13 +71,10 @@ class ModelDetailView(BaseView):
         print(args, kwargs)
         orm_obj = self.get_object(*args, **kwargs)
         if not orm_obj:
-            error_response = self.data_formater.build_error_response("Not found",
-                                                                     source="",
-                                                                     code=404
-                                                                     )
-            return error_response, 404
+            error = ObjectNotFoundError(self.model, kwargs.get("id"))
+            raise ApiException([error], 404)
         orm_obj_json = serialise(orm_obj, self, with_info=True)
-        return orm_obj_json, 200
+        return self.data_formater.create_response(orm_obj_json, 200)
 
     def update(self, *args, **kwargs):
         data = json.loads(request.data)
@@ -67,11 +83,8 @@ class ModelDetailView(BaseView):
         model_obj = self.get_object(*args, **kwargs)
         print("MODEL OBJ: ", model_obj)
         if model_obj is None:
-            error_response = self.data_formater.build_error_response("Not found",
-                                                                     source="",
-                                                                     code=404
-                                                                     )
-            return error_response, 404
+            error = ObjectNotFoundError(self.model, kwargs.get("id"))
+            raise ApiException([error], 404)
         try:
             data = self.data_formater.parse_data(data)
             data = self.schema().load(data, partial=True)
@@ -91,16 +104,13 @@ class ModelDetailView(BaseView):
                                                                source="",
                                                                code=404
                                                                )
-        return response, code
+        return self.data_formater.create_response(response, code)
 
     def delete(self, *args, **kwargs):
         orm_obj = self.get_object(*args, **kwargs)
         if not orm_obj:
-            response = self.data_formater.build_error_response("Not found",
-                                                               source="",
-                                                               code=404
-                                                               )
-            return response, 404
+            error = ObjectNotFoundError(self.model, kwargs.get("id"))
+            raise ApiException([error], 404)
         self.session.delete(orm_obj)
         self.session.commit()
         return '', 202
@@ -111,22 +121,6 @@ class ModelDetailView(BaseView):
 
     def patch(self, *args, **kwargs):
         return self.update(*args, **kwargs)
-
-    def dispatch_request(self, *args, **kwargs):
-        meth = getattr(self, request.method.lower(), None)
-        print('meth :', meth)
-#         print('methodes: ', lower_methods,request.method.lower() )
-        # If the request method is HEAD and we don't have a handler for it
-        # retry with GET.
-        if meth is None and request.method == 'HEAD':
-            meth = getattr(self, 'get', None)
-
-        if meth is None:
-            raise MethodNotAllowed('%s method not allowed.' %
-                                   request.method.lower()
-                                   )
-        assert meth is not None, 'Unimplemented method %r' % request.method
-        return meth(*args, **kwargs)
 
 
 class ModelListView(BaseView):
