@@ -26,6 +26,7 @@ class BaseView(MethodView):
     links = {}
     data_format = "jsonapi"
     handle_exception = (ValidationError)
+    _decorators = {}
 
     def __init__(self, *args, **kwargs):
         super(MethodView, self).__init__(*args, **kwargs)
@@ -39,7 +40,13 @@ class BaseView(MethodView):
         for method in methods:
             if method not in allowed_method:
                 setattr(self, method, None)
-                
+
+    def apply_decorators(self, meth):
+        decorators = self._decorators.get(request.method.lower(), [])
+        for decorator in decorators:
+            meth = decorator(meth)
+        return meth
+
     def dispatch_request(self, *args, **kwargs):
         meth = getattr(self, request.method.lower(), None)
         print('meth :', meth)
@@ -54,6 +61,7 @@ class BaseView(MethodView):
                                    request.method.lower()
                                    )
         assert meth is not None, 'Unimplemented method %r' % request.method
+        meth = self.apply_decorators(meth)
         try:
             return meth(*args, **kwargs)
         except ApiException as e:
