@@ -6,5 +6,6 @@ class ApiException(Exception):
     
     def __init__(self, errors, code):
         self.errors = errors
+        self.code = code
 
 

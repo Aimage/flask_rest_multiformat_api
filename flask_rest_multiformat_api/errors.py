@@ -24,4 +24,11 @@ class ObjectNotFoundError(ApiError):
         detail = "{} {} is not available".format(model.__name__, id_object)
         super().__init__(detail, title=title, status="404", code=404)
         
+
+class InvalidDataformatError(ApiError):
     
+    def __init__(self, format_name, detail=None):
+        title = "Invalid data format"
+        if detail is None:
+            detail = "Data is not {} valid format".format(format_name)
+        super().__init__(detail, title=title, status="400", code=400)

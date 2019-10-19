@@ -1,6 +1,7 @@
 from copy import deepcopy
 import json
 from flask import make_response
+from flask_rest_multiformat_api.errors import ApiError
 
 
 DATA_BASE_DICT = {"type": "",
@@ -27,7 +28,7 @@ def build_data_dict(orm_obj__dict, type='', links={}):
     return data_dict
 
 
-def parse_data(data):
+def parse(data):
     data = data.get("data")
     if data is None:
         raise ValueError("Missing \"data\" key")
@@ -37,6 +38,18 @@ def parse_data(data):
     if data.get('id'):
         new_data['id'] = data['id']
     return new_data
+
+
+def parse_data(data):
+    data = json.loads(data)
+    parsed_data = None
+    if isinstance(data, list):
+        parsed_data = []
+        for dat in data:
+            parsed_data.append(parse(dat))
+    else:
+        parsed_data = parse(data)
+    return parsed_data
 
 
 def build_error_data(message, title="", source="", status=400):

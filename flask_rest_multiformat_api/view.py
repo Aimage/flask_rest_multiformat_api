@@ -8,7 +8,6 @@ from .queries import get_single, get_many
 import json
 from werkzeug.exceptions import BadRequest, MethodNotAllowed
 from marshmallow import ValidationError
-from flask_login import login_required, current_user
 from sqlalchemy.orm import Query
 from .format import DATA_FORMATER
 from .exceptions import ApiException
@@ -61,11 +60,12 @@ class BaseView(MethodView):
                                    request.method.lower()
                                    )
         assert meth is not None, 'Unimplemented method %r' % request.method
-        meth = self.apply_decorators(meth)
         try:
+            meth = self.apply_decorators(meth)
             return meth(*args, **kwargs)
         except ApiException as e:
             return self.data_formater.build_error_response(e.errors)
+
 
 class ModelDetailView(BaseView):
 #     decorators = [login_required]
@@ -85,7 +85,7 @@ class ModelDetailView(BaseView):
         return self.data_formater.create_response(orm_obj_json, 200)
 
     def update(self, *args, **kwargs):
-        data = json.loads(request.data)
+#         data = json.loads(request.data)
         response = ''
         code = 201
         model_obj = self.get_object(*args, **kwargs)
@@ -94,7 +94,7 @@ class ModelDetailView(BaseView):
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
         try:
-            data = self.data_formater.parse_data(data)
+            data = self.data_formater.parse_data(request.data)
             data = self.schema().load(data, partial=True)
             model_obj = apply_data_to_model(self.model, model_obj, data) if \
                         isinstance(data, dict) else data
@@ -154,29 +154,38 @@ class ModelListView(BaseView):
                                   )
         return orm_objs_json, 200
 
-    def update(self, *args, **kwargs):
-        data = json.loads(request.data)
+    def post(self, *args, **kwargs):
+#         json_data = json.loads(request.data)
         response = ''
         code = 201
-        model_obj = self.model()
-        try:
-            data = self.data_formater.parse_data(data)
-            data = self.schema().load(data, partial=True)
-            model_obj = apply_data_to_model(self.model, model_obj, data) if isinstance(data, dict) else data
-            if not model_obj.id:
-                self.session.add(model_obj)
-            self.session.commit()
-            response = serialise(model_obj, self, with_info=False)
-        except self.handle_exception as e:
-            code = 400
-            if hasattr(e, 'message'):
-                response = e.message
-            else:
-                response = str(e)
+#         datas = json_data if isinstance(json_data, list) else [json_data]
+#         print("DATAS: ", datas)
+        datas = self.data_formater.parse_data(request.data) 
+        self.before_post(args, kwargs, datas)
+        for data in datas:
+            model_obj = self.model()
+            try:
+#                 data = self.data_formater.parse_data(data)
+                print(data)
+                data = self.schema().load(data, partial=True)
+                model_obj = apply_data_to_model(self.model, model_obj, data) if isinstance(data, dict) else data
+                if not model_obj.id:
+                    self.session.add(model_obj)
+                self.session.commit()
+                response = serialise(model_obj, self, with_info=False)
+            except self.handle_exception as e:
+                code = 400
+                if hasattr(e, 'message'):
+                    response = e.message
+                else:
+                    response = str(e)
         return response, code
 
-    def post(self, *args, **kwargs):
-        return self.update(*args, **kwargs)
+    def before_post(self, args, kwargs, data=None):
+        pass
+
+    def after_post(self):
+        pass
 
 
 class RelationshipView(BaseView):
