@@ -16,12 +16,18 @@ RIGHT_DATA = {
                     }
                 }
 RIGHT_DATA_TXT = json.dumps(RIGHT_DATA) 
-
+RIGHT_DATAS_TXT = "[{}, {}]".format(RIGHT_DATA_TXT, RIGHT_DATA_TXT)
 
 def test_parse_right_data():
     result = simple_json.parse_data(RIGHT_DATA_TXT)
     assert result == RIGHT_DATA["data"]
     
+
+def test_parse_right_datas():
+    result = simple_json.parse_data(RIGHT_DATAS_TXT)
+    for data in result:
+        assert data == RIGHT_DATA["data"]
+
     
 def test_parse_wrong_format_data():
     wrong_data = "{} {}".format(RIGHT_DATA_TXT, "hehehe, hihihi")
