@@ -85,33 +85,20 @@ class ModelDetailView(BaseView):
         return self.data_formater.create_response(orm_obj_json, 200)
 
     def update(self, *args, **kwargs):
-#         data = json.loads(request.data)
-        response = ''
         code = 201
         model_obj = self.get_object(*args, **kwargs)
         print("MODEL OBJ: ", model_obj)
         if model_obj is None:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
-        try:
-            data = self.data_formater.parse_data(request.data)
-            data = self.schema().load(data, partial=True)
-            model_obj = apply_data_to_model(self.model, model_obj, data) if \
-                        isinstance(data, dict) else data
-            if not model_obj.id:
-                self.session.add(model_obj)
-            self.session.commit()
-            response = serialise(model_obj, self, with_info=False)
-        except self.handle_exception as e:
-            code = 400
-            if hasattr(e, 'message'):
-                error_message = e.message
-            else:
-                error_message = str(e)
-            response = self.data_formater.build_error_response(error_message,
-                                                               source="",
-                                                               code=404
-                                                               )
+        data = self.data_formater.parse_data(request.data)
+        data = self.schema().load(data, partial=True)
+        model_obj = apply_data_to_model(self.model, model_obj, data) if \
+                    isinstance(data, dict) else data
+        if not model_obj.id:
+            self.session.add(model_obj)
+        self.session.commit()
+        response = serialise(model_obj, self, with_info=False)
         return self.data_formater.create_response(response, code)
 
     def delete(self, *args, **kwargs):
@@ -122,8 +109,7 @@ class ModelDetailView(BaseView):
         self.session.delete(orm_obj)
         self.session.commit()
         return '', 202
-# 
-#     @login_required
+
     def put(self, *args, **kwargs):
         return self.update(*args, **kwargs)
 
@@ -155,30 +141,17 @@ class ModelListView(BaseView):
         return orm_objs_json, 200
 
     def post(self, *args, **kwargs):
-#         json_data = json.loads(request.data)
         response = ''
         code = 201
-#         datas = json_data if isinstance(json_data, list) else [json_data]
-#         print("DATAS: ", datas)
         datas = self.data_formater.parse_data(request.data) 
         self.before_post(args, kwargs, datas)
         for data in datas:
             model_obj = self.model()
-            try:
-#                 data = self.data_formater.parse_data(data)
-                print(data)
-                data = self.schema().load(data, partial=True)
-                model_obj = apply_data_to_model(self.model, model_obj, data) if isinstance(data, dict) else data
-                if not model_obj.id:
-                    self.session.add(model_obj)
-                self.session.commit()
-                response = serialise(model_obj, self, with_info=False)
-            except self.handle_exception as e:
-                code = 400
-                if hasattr(e, 'message'):
-                    response = e.message
-                else:
-                    response = str(e)
+            data = self.schema().load(data, partial=True)
+            model_obj = apply_data_to_model(self.model, model_obj, data) if isinstance(data, dict) else data
+            self.session.add(model_obj)
+            self.session.commit()
+            response = serialise(model_obj, self, with_info=False)
         return response, code
 
     def before_post(self, args, kwargs, data=None):
