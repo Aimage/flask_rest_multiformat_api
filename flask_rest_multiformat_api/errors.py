@@ -32,3 +32,10 @@ class InvalidDataformatError(ApiError):
         if detail is None:
             detail = "Data is not {} valid format".format(format_name)
         super().__init__(detail, title=title, status="400", code=400)
+
+
+class InvalidDataError(ApiError):
+    def __init__(self, detail, title=""):
+        title = title or "Invalid data"
+        detail = detail
+        super().__init__(detail, title=title, status="400", code=400)

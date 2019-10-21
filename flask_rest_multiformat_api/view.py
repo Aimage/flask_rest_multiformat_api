@@ -11,8 +11,9 @@ from marshmallow import ValidationError
 from sqlalchemy.orm import Query
 from .format import DATA_FORMATER
 from .exceptions import ApiException
-from flask_rest_multiformat_api.errors import ApiError, ObjectNotFoundError
-
+from flask_rest_multiformat_api.errors import (ApiError, ObjectNotFoundError,
+                                               InvalidDataError
+                                                )
 
 DEFAULT_FORMATER = DATA_FORMATER['jsonapi']
 
@@ -63,12 +64,14 @@ class BaseView(MethodView):
         try:
             meth = self.apply_decorators(meth)
             return meth(*args, **kwargs)
-        except ApiException as e:
+        except (ApiException, ValidationError) as e:
+            if isinstance(e, ValidationError):
+                errors = [InvalidDataError(e.messages)]
+                return self.data_formater.build_error_response(errors)
             return self.data_formater.build_error_response(e.errors)
 
 
 class ModelDetailView(BaseView):
-#     decorators = [login_required]
 
     def get_object(self, *args, **kwargs):
         id = kwargs.get("id")
@@ -145,6 +148,7 @@ class ModelListView(BaseView):
         code = 201
         datas = self.data_formater.parse_data(request.data) 
         self.before_post(args, kwargs, datas)
+        datas = datas if isinstance(datas, list) else [datas]
         for data in datas:
             model_obj = self.model()
             data = self.schema().load(data, partial=True)
