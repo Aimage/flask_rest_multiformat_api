@@ -158,6 +158,12 @@ class ModelListView(BaseView):
             response = serialise(model_obj, self, with_info=False)
         return response, code
 
+    def create_object(self, data, *args, **kwargs):
+        model_obj = self.model()
+        data = self.schema().load(data, partial=True)
+        model_obj = apply_data_to_model(self.model, model_obj, data) if isinstance(data, dict) else data
+        return model_obj
+        
     def before_post(self, args, kwargs, data=None):
         pass
 
@@ -185,19 +191,25 @@ class RelationshipView(BaseView):
             if method not in allowed_method:
                 setattr(self, method, None)
 
-    def get(self, id, id_relation):
-        query_function = self.queries['single']
-        orm_obj = query_function(self.session, self.model, id, with_info=True)
-        print(orm_obj)
-        if not orm_obj:
-            return "Not found", 404
-        relation_objects = getattr(orm_obj, self.relation_attribute_name, None)
-        model_attr = getattr(self.model, self.relation_attribute_name, None)
-        relation_model = model_attr.property.mapper.class_
+    def get_object(self, *args, **kwargs):
+        id = kwargs.get("id")
+        model_object = get_single(self.session, self.model, id)
+        return model_object
+    
+    def get_related_object(self, orm_obj):
+        relation_object = getattr(orm_obj, self.relation_attribute_name, None)
+        return relation_object
+    
+    def get(self, *args, **kwargs):
+        orm_object = self.get_object(*args, **kwargs)
+        related_object = self.get_related_object(orm_object)
         # to do: add filter for performance 
-        relation_objects = relation_objects.all() if \
-                           isinstance(relation_objects, Query)\
-                           else relation_objects
+        relation_objects = related_object.all() if \
+                           isinstance(related_object, Query)\
+                           else related_object
+        relation_model = relation_objects.__class__ if not isinstance(relation_objects, list) \
+                         else  relation_objects[0].__class__
+        id_relation = kwargs.get("id_relation")
         if id_relation:
             object = None
             if relation_objects:

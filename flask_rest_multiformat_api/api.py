@@ -2,6 +2,7 @@
 class RestApi(object):
     def __init__(self, app):
         self.app = app
+        self.frefix_url = self.app.config["API_URL_PREFIX"] or ""
         
     def register_api(self, bleuprint, view, endpoint, url):
         view_func = view.as_view(endpoint)
@@ -19,4 +20,4 @@ class RestApi(object):
                          methods=view.allowed_methods)
     
     def register_blueprint(self, blueprint):
-        self.app.register_blueprint(blueprint)
+        self.app.register_blueprint(blueprint, url_prefix=self.frefix_url)
