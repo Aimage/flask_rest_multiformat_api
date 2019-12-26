@@ -95,7 +95,6 @@ class ModelDetailView(BaseView):
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
         data = self.data_formater.parse_data(request.data)
-        data = self.schema().load(data, partial=True)
         model_obj = apply_data_to_model(self.model, model_obj, data) if \
                     isinstance(data, dict) else data
         if not model_obj.id:
