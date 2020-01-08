@@ -72,7 +72,8 @@ class BaseView(MethodView):
 
 
 class ModelDetailView(BaseView):
-
+    allowed_methods = ['GET', 'PUT', 'PATCH', 'DELETE']
+    
     def get_object(self, *args, **kwargs):
         id = kwargs.get("id")
         model_object = get_single(self.session, self.model, id)
@@ -84,7 +85,7 @@ class ModelDetailView(BaseView):
         if not orm_obj:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
-        orm_obj_json = serialise(orm_obj, self, with_info=True)
+        orm_obj_json = serialise(orm_obj, self)
         return self.data_formater.create_response(orm_obj_json, 200)
 
     def update(self, *args, **kwargs):
@@ -100,7 +101,7 @@ class ModelDetailView(BaseView):
         if not model_obj.id:
             self.session.add(model_obj)
         self.session.commit()
-        response = serialise(model_obj, self, with_info=False)
+        response = serialise(model_obj, self)
         return self.data_formater.create_response(response, code)
 
     def delete(self, *args, **kwargs):
@@ -137,36 +138,34 @@ class ModelListView(BaseView):
     def get(self, *args, **kwargs):
         orm_objs = self.get_objects(*args, **kwargs)
         page_number = request.args.get('page', 0)
-        orm_objs_json = serialise(orm_objs, self, with_info=True,
+        orm_objs_json = serialise(orm_objs, self,
                                   page_number=page_number,
                                   )
         return orm_objs_json, 200
 
     def post(self, *args, **kwargs):
-        response = ''
         code = 201
-        datas = self.data_formater.parse_data(request.data) 
-        self.before_post(args, kwargs, datas)
-        datas = datas if isinstance(datas, list) else [datas]
-        for data in datas:
-            model_obj = self.model()
-            data = self.schema().load(data, partial=True)
-            model_obj = apply_data_to_model(self.model, model_obj, data) if isinstance(data, dict) else data
-            self.session.add(model_obj)
-            self.session.commit()
-            response = serialise(model_obj, self, with_info=False)
+        data = self.data_formater.parse_data(request.data) 
+        self.before_post(args, kwargs, data)
+        model_obj = self.create_object(data, *args, **kwargs)
+        self.after_create_object(model_obj, *args, **kwargs)
+        response = serialise(model_obj, self)
+        self.after_post(model_obj, args, kwargs)
         return response, code
 
     def create_object(self, data, *args, **kwargs):
-        model_obj = self.model()
-        data = self.schema().load(data, partial=True)
-        model_obj = apply_data_to_model(self.model, model_obj, data) if isinstance(data, dict) else data
+        model_obj = self.schema().load(data, partial=True)
+        self.session.add(model_obj)
+        self.session.commit()
         return model_obj
+        
+    def after_create_object(self, new_object, *args, **kwargs):
+        pass
         
     def before_post(self, args, kwargs, data=None):
         pass
 
-    def after_post(self):
+    def after_post(self, new_object, args, kwargs):
         pass
 
 
@@ -214,9 +213,9 @@ class RelationshipView(BaseView):
             if relation_objects:
                 for relation_object in relation_objects:
                     if relation_object.id == id_relation:
-                        object_str = serialise(relation_object, self, with_info=True)
+                        object_str = serialise(relation_object, self)
         else:
-            object_str = serialise(relation_objects, self, with_info=True)
+            object_str = serialise(relation_objects, self)
         return object_str, 200
 
     def post(self, id):
@@ -227,30 +226,30 @@ class RelationshipView(BaseView):
             return 'Id relation must be specified', 400
 
         query_function = self.queries['single']
-        orm_obj = query_function(self.session, self.model, id, with_info=True)
+        orm_obj = query_function(self.session, self.model, id)
         relation_objects = getattr(orm_obj, self.relation_attribute_name, [])
 
         model_attr = getattr(self.model, self.relation_attribute_name, None)
         relation_model = model_attr.property.mapper.class_
-        relation_obj = query_function(self.session, relation_model, id_relation, with_info=True)
+        relation_obj = query_function(self.session, relation_model, id_relation)
         if not relation_obj:
             return 'Object for relation not found', 400
 
         relation_objects.append(relation_obj)
         self.session.commit()
 
-        object_str = serialise(relation_obj, self, with_info=True)
+        object_str = serialise(relation_obj, self)
         return object_str, 201
 
     def delete(self, id, id_relation):
         print("delete request")
         query_function = self.queries['single']
-        orm_obj = query_function(self.session, self.model, id, with_info=True)
+        orm_obj = query_function(self.session, self.model, id)
         relation_objects = getattr(orm_obj, self.relation_attribute_name, [])
 
         model_attr = getattr(self.model, self.relation_attribute_name, None)
         relation_model = model_attr.property.mapper.class_
-        relation_obj = query_function(self.session, relation_model, id_relation, with_info=True)
+        relation_obj = query_function(self.session, relation_model, id_relation)
         if not relation_obj:
             return 'Object for relation not found', 400
         relation_objects.remove(relation_obj)

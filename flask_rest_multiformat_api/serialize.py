@@ -73,7 +73,7 @@ def build_dict_response(orm_obj__dict, data_formater, page_number, **kwargs):
     return result_dict
 
 
-def serialise(orm_obj, view, with_info, page_number=0):
+def serialise(orm_obj, view, page_number=0):
     Schema = view.schema
     model_schema = Schema(many=True) if isinstance(orm_obj, list) else Schema() 
     orm_obj__dict = model_schema.dump(orm_obj)
