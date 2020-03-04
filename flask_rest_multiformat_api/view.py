@@ -91,26 +91,26 @@ class ModelDetailView(BaseView):
     def update(self, *args, **kwargs):
         code = 201
         model_obj = self.get_object(*args, **kwargs)
-        print("MODEL OBJ: ", model_obj)
+#         print("MODEL OBJ: ", model_obj)
         if model_obj is None:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
         data = self.data_formater.parse_data(request.data)
         model_obj = apply_data_to_model(self.model, model_obj, data) if \
                     isinstance(data, dict) else data
-        if not model_obj.id:
-            self.session.add(model_obj)
         self.session.commit()
         response = serialise(model_obj, self)
         return self.data_formater.create_response(response, code)
 
     def delete(self, *args, **kwargs):
         orm_obj = self.get_object(*args, **kwargs)
+        self.before_delete_object(orm_obj, *args, **kwargs)
         if not orm_obj:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
         self.session.delete(orm_obj)
         self.session.commit()
+        self.after_delete_object(orm_obj, *args, **kwargs)
         return '', 202
 
     def put(self, *args, **kwargs):
@@ -119,6 +119,11 @@ class ModelDetailView(BaseView):
     def patch(self, *args, **kwargs):
         return self.update(*args, **kwargs)
 
+    def before_delete_object(self, object, *args, **kwargs):
+        pass
+    
+    def after_delete_object(self, object, *args, **kwargs):
+        pass
 
 class ModelListView(BaseView):
     allowed_methods = ['GET', 'POST']
@@ -167,7 +172,7 @@ class ModelListView(BaseView):
 
     def after_post(self, new_object, args, kwargs):
         pass
-
+        
 
 class RelationshipView(BaseView):
     model = None
