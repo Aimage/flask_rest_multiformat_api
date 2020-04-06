@@ -33,9 +33,10 @@ class BaseView(MethodView):
         allowed_method = [method.lower() for method in self.allowed_methods]
         methods = [meth.lower() for meth in self.methods]
 
-        self.data_formater = DATA_FORMATER.get(self.data_format,
+        Dataformater =        DATA_FORMATER.get(self.data_format,
                                                DEFAULT_FORMATER
                                                )
+        self.data_formater = Dataformater()
 
         for method in methods:
             if method not in allowed_method:
@@ -124,6 +125,7 @@ class ModelDetailView(BaseView):
     
     def after_delete_object(self, object, *args, **kwargs):
         pass
+
 
 class ModelListView(BaseView):
     allowed_methods = ['GET', 'POST']
