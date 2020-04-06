@@ -25,10 +25,10 @@ def get_single(session, model, id):
 
 
 def apply_filters(query, model, filters):
-    for filter in filters:
-        op = filter.get('op')
-        name = filter.get('name')
-        value = filter.get('val')
+    for _filter in filters:
+        op = _filter.get('op')
+        name = _filter.get('name')
+        value = _filter.get('val')
         attrib = getattr(model, name, None)
         if not attrib:
             continue
@@ -56,8 +56,7 @@ def apply_order(query, model, order_by, order):
         else :
             query = query.order_by(attrib)
     return query
-            
-    
+
 
 def get_many(session, model, filters=[], order_by='', order='', number_par_page=50, page_number=0):
     query = build_base_query(session, model)
