@@ -20,7 +20,9 @@ class JsonApiFormater():
             data_dict["attributes"] = _orm_obj_dict
             data_dict["id"] = _orm_obj_dict.get('id')
             data_dict["type"] = type
-            link_dict['self'] = "{}/{}".format(link_dict['self'].split("<")[0], _orm_obj_dict.get('id'))
+            link_dict['self'] = "{}{}{}".format(link_dict['self'].split("<")[0],
+                                                link_dict['self'].split(">")[1],
+                                                _orm_obj_dict.get('id'))
             data_dict["links"] = link_dict
             return data_dict
         if isinstance(orm_obj__dict, list):

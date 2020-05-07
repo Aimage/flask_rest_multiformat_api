@@ -3,7 +3,8 @@ class RestApi(object):
     def __init__(self, app):
         self.app = app
         self.frefix_url = self.app.config["API_URL_PREFIX"] or ""
-        
+        self.views = []
+
     def register_api(self, bleuprint, view, endpoint, url):
         view_func = view.as_view(endpoint)
         links = {}
@@ -18,6 +19,7 @@ class RestApi(object):
         methods = [method for method in view.allowed_methods if method != 'POST']
         bleuprint.add_url_rule(url, view_func=view_func,
                          methods=view.allowed_methods)
-    
+        self.views.append({"view_func": view_func, "endpoint": endpoint})
+
     def register_blueprint(self, blueprint):
         self.app.register_blueprint(blueprint, url_prefix=self.frefix_url)
