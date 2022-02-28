@@ -10,6 +10,10 @@ Download the zip of this repository and run pip after extracting
 
 `pip install flask_rest_multiformat_api`
 
+## Available format
+- simple_json
+- jsonapi
+
 ## Basic usage
 Create you model
 ```python
