@@ -5,6 +5,7 @@ from .date_util import date_to_str_fr
 import datetime
 from sqlalchemy.orm import relationships
 from .format import DATA_FORMATER
+from flask import url_for, request
 
 
 DEFAULT_FORMATER = DATA_FORMATER['jsonapi']
@@ -75,12 +76,13 @@ def build_dict_response(orm_obj__dict, data_formater, page_number, **kwargs):
 
 def serialise(orm_obj, view, page_number=0):
     Schema = view.schema
-    model_schema = Schema(many=True) if isinstance(orm_obj, list) else Schema() 
+    model_schema = Schema(many=True) if isinstance(orm_obj, list) else Schema()
+    self_url = request.url if isinstance(orm_obj, list) else f"/{view.type}/{orm_obj.id}"
     orm_obj__dict = model_schema.dump(orm_obj)
     data_formater = view.data_formater
     kwargs = {
                 "type": view.type,
-                "links": view.links
+                "links": {"self": self_url}
             }
     result_dict = build_dict_response(orm_obj__dict, data_formater, page_number, **kwargs)
     formated_response = data_formater.format_response(result_dict)

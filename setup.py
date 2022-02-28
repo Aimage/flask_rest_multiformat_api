@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(name='Flask-REST-multiformat-api',
-      version='0.1',
+      version='0.1.0',
       description='Flask extension to create REST api using different \
                       kind of format like JSONAPI 1.0',
       url='https://github.com/Aimage/flask_rest_multiformat_api',

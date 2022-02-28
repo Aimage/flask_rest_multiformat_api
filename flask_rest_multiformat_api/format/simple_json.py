@@ -6,7 +6,7 @@ from flask_rest_multiformat_api.exceptions import ApiException
 
 class SipleJsonFormater():
     
-    def build_data_dict(self, orm_obj__dict, type=''):
+    def build_data_dict(self, orm_obj__dict, type='', **kwargs):
         return orm_obj__dict
     
     def parse(self, data):

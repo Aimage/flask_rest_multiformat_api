@@ -33,7 +33,7 @@ class BaseView(MethodView):
         allowed_method = [method.lower() for method in self.allowed_methods]
         methods = [meth.lower() for meth in self.methods]
 
-        Dataformater =        DATA_FORMATER.get(self.data_format,
+        Dataformater = DATA_FORMATER.get(self.data_format,
                                                DEFAULT_FORMATER
                                                )
         self.data_formater = Dataformater()
@@ -161,7 +161,7 @@ class ModelListView(BaseView):
         return response, code
 
     def create_object(self, data, *args, **kwargs):
-        model_obj = self.schema().load(data, partial=True)
+        model_obj = self.schema().load(data,  session=self.session)
         self.session.add(model_obj)
         self.session.commit()
         return model_obj
@@ -169,7 +169,7 @@ class ModelListView(BaseView):
     def after_create_object(self, new_object, *args, **kwargs):
         pass
         
-    def before_post(self, args, kwargs, data=None):
+    def before_post(self, data, *args, **kwargs):
         pass
 
     def after_post(self, new_object, args, kwargs):
