@@ -153,7 +153,7 @@ class ModelListView(BaseView):
     def post(self, *args, **kwargs):
         code = 201
         data = self.data_formater.parse_data(request.data) 
-        self.before_post(args, kwargs, data)
+        self.before_post(data, *args, **kwargs)
         model_obj = self.create_object(data, *args, **kwargs)
         self.after_create_object(model_obj, *args, **kwargs)
         response = serialise(model_obj, self)
@@ -161,8 +161,13 @@ class ModelListView(BaseView):
         return response, code
 
     def create_object(self, data, *args, **kwargs):
-        model_obj = self.schema().load(data,  session=self.session)
-        self.session.add(model_obj)
+        is_many = isinstance(data, list)
+        model_obj = self.schema().load(data, many=is_many, session=self.session)
+        if is_many:
+            for model in model_obj:
+                self.session.add(model)
+        else:
+            self.session.add(model_obj)
         self.session.commit()
         return model_obj
         
