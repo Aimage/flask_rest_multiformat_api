@@ -45,9 +45,9 @@ def validate_filters(filters):
 
 def loads_filters(request):
     filter_dict = []
-    filters = request.args.get('filters')
+    filters = request.args.get('filters', None)
     print('filers: ', filters)
-    if isinstance(filters, str):
+    if filters and isinstance(filters, str):
         filter_dict = json.loads(filters)
     return filter_dict
 

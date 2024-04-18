@@ -12,8 +12,7 @@ from sqlalchemy.orm import Query
 from .format import DATA_FORMATER
 from .exceptions import ApiException
 from flask_rest_multiformat_api.errors import (ApiError, ObjectNotFoundError,
-                                               InvalidDataError
-                                                )
+                                               InvalidDataError)
 
 DEFAULT_FORMATER = DATA_FORMATER['jsonapi']
 
@@ -33,9 +32,7 @@ class BaseView(MethodView):
         allowed_method = [method.lower() for method in self.allowed_methods]
         methods = [meth.lower() for meth in self.methods]
 
-        Dataformater = DATA_FORMATER.get(self.data_format,
-                                               DEFAULT_FORMATER
-                                               )
+        Dataformater = DATA_FORMATER.get(self.data_format, DEFAULT_FORMATER)
         self.data_formater = Dataformater()
 
         for method in methods:
@@ -51,7 +48,7 @@ class BaseView(MethodView):
     def dispatch_request(self, *args, **kwargs):
         meth = getattr(self, request.method.lower(), None)
         print('meth :', meth)
-#         print('methodes: ', lower_methods,request.method.lower() )
+        #         print('methodes: ', lower_methods,request.method.lower() )
         # If the request method is HEAD and we don't have a handler for it
         # retry with GET.
         if meth is None and request.method == 'HEAD':
@@ -59,8 +56,7 @@ class BaseView(MethodView):
 
         if meth is None:
             raise MethodNotAllowed('%s method not allowed.' %
-                                   request.method.lower()
-                                   )
+                                   request.method.lower())
         assert meth is not None, 'Unimplemented method %r' % request.method
         try:
             meth = self.apply_decorators(meth)
@@ -74,7 +70,7 @@ class BaseView(MethodView):
 
 class ModelDetailView(BaseView):
     allowed_methods = ['GET', 'PUT', 'PATCH', 'DELETE']
-    
+
     def get_object(self, *args, **kwargs):
         id = kwargs.get("id")
         model_object = get_single(self.session, self.model, id)
@@ -92,13 +88,17 @@ class ModelDetailView(BaseView):
     def update(self, *args, **kwargs):
         code = 201
         model_obj = self.get_object(*args, **kwargs)
-#         print("MODEL OBJ: ", model_obj)
+        #         print("MODEL OBJ: ", model_obj)
         if model_obj is None:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
+
+        model_obj = self.before_update_object(model_obj, *args, **kwargs)
+
         data = self.data_formater.parse_data(request.data)
-        model_obj = apply_data_to_model(self.model, model_obj, data) if \
-                    isinstance(data, dict) else data
+        self.schema().validate(data, many=False, session=self.session)
+        model_obj = apply_data_to_model(
+            self.model, model_obj, data) if isinstance(data, dict) else data
         self.session.commit()
         response = serialise(model_obj, self)
         return self.data_formater.create_response(response, code)
@@ -120,12 +120,23 @@ class ModelDetailView(BaseView):
     def patch(self, *args, **kwargs):
         return self.update(*args, **kwargs)
 
-    def before_delete_object(self, object, *args, **kwargs):
-        pass
-    
-    def after_delete_object(self, object, *args, **kwargs):
+    def before_delete_object(self, orm_obj, *args, **kwargs):
+        return orm_obj
+
+    def before_update_object(self, orm_obj, *args, **kwargs):
+        return orm_obj
+
+    def after_delete_object(self, orm_obj, *args, **kwargs):
+        return orm_obj
+
+    def before_get_object(self, orm_obj, *args, **kwargs):
         pass
 
+    def before_get_put(self, object, *args, **kwargs):
+        pass
+
+    def before_get_patch(self, object, *args, **kwargs):
+        pass
 
 class ModelListView(BaseView):
     allowed_methods = ['GET', 'POST']
@@ -136,24 +147,27 @@ class ModelListView(BaseView):
         order_by = request.args.get('sort_by', '')
         number_par_page = request.args.get('per_page', 50)
         page_number = request.args.get('page', 0)
-        model_objects = get_many(self.session, self.model,
-                                 filters_dict, order_by, order,
-                                 number_par_page, page_number
-                                 )
+        model_objects = get_many(self.session, self.model, filters_dict,
+                                 order_by, order, number_par_page, page_number)
         return model_objects
 
     def get(self, *args, **kwargs):
+        self.before_get(*args, **kwargs)
         orm_objs = self.get_objects(*args, **kwargs)
+        print("RESULT: ", orm_objs, " -END RESULT")
         page_number = request.args.get('page', 0)
-        orm_objs_json = serialise(orm_objs, self,
-                                  page_number=page_number,
-                                  )
+        orm_objs_json = serialise(
+            orm_objs,
+            self,
+            page_number=page_number,
+        )
         return orm_objs_json, 200
 
     def post(self, *args, **kwargs):
         code = 201
-        data = self.data_formater.parse_data(request.data) 
+        data = self.data_formater.parse_data(request.data)
         self.before_post(data, *args, **kwargs)
+        print("DATA: ", data)
         model_obj = self.create_object(data, *args, **kwargs)
         self.after_create_object(model_obj, *args, **kwargs)
         response = serialise(model_obj, self)
@@ -162,7 +176,9 @@ class ModelListView(BaseView):
 
     def create_object(self, data, *args, **kwargs):
         is_many = isinstance(data, list)
-        model_obj = self.schema().load(data, many=is_many, session=self.session)
+        model_obj = self.schema().load(data,
+                                       many=is_many,
+                                       session=self.session)
         if is_many:
             for model in model_obj:
                 self.session.add(model)
@@ -170,16 +186,19 @@ class ModelListView(BaseView):
             self.session.add(model_obj)
         self.session.commit()
         return model_obj
-        
+
     def after_create_object(self, new_object, *args, **kwargs):
         pass
-        
+
     def before_post(self, data, *args, **kwargs):
+        pass
+
+    def before_get(self, *args, **kwargs):
         pass
 
     def after_post(self, new_object, args, kwargs):
         pass
-        
+
 
 class RelationshipView(BaseView):
     model = None
@@ -195,7 +214,8 @@ class RelationshipView(BaseView):
         allowed_method = [method.lower() for method in self.allowed_methods]
         methods = [meth.lower() for meth in self.methods]
 
-        self.data_formater = DATA_FORMATER.get(self.data_format, DEFAULT_FORMATER)
+        self.data_formater = DATA_FORMATER.get(self.data_format,
+                                               DEFAULT_FORMATER)
 
         for method in methods:
             if method not in allowed_method:
@@ -205,20 +225,19 @@ class RelationshipView(BaseView):
         id = kwargs.get("id")
         model_object = get_single(self.session, self.model, id)
         return model_object
-    
+
     def get_related_object(self, orm_obj):
         relation_object = getattr(orm_obj, self.relation_attribute_name, None)
         return relation_object
-    
+
     def get(self, *args, **kwargs):
         orm_object = self.get_object(*args, **kwargs)
         related_object = self.get_related_object(orm_object)
-        # to do: add filter for performance 
-        relation_objects = related_object.all() if \
-                           isinstance(related_object, Query)\
-                           else related_object
-        relation_model = relation_objects.__class__ if not isinstance(relation_objects, list) \
-                         else  relation_objects[0].__class__
+        # to do: add filter for performance
+        relation_objects = related_object.all() if isinstance(
+            related_object, Query) else related_object
+        relation_model = relation_objects.__class__ if not isinstance(
+            relation_objects, list) else relation_objects[0].__class__
         id_relation = kwargs.get("id_relation")
         if id_relation:
             object = None
@@ -243,7 +262,8 @@ class RelationshipView(BaseView):
 
         model_attr = getattr(self.model, self.relation_attribute_name, None)
         relation_model = model_attr.property.mapper.class_
-        relation_obj = query_function(self.session, relation_model, id_relation)
+        relation_obj = query_function(self.session, relation_model,
+                                      id_relation)
         if not relation_obj:
             return 'Object for relation not found', 400
 
@@ -261,7 +281,8 @@ class RelationshipView(BaseView):
 
         model_attr = getattr(self.model, self.relation_attribute_name, None)
         relation_model = model_attr.property.mapper.class_
-        relation_obj = query_function(self.session, relation_model, id_relation)
+        relation_obj = query_function(self.session, relation_model,
+                                      id_relation)
         if not relation_obj:
             return 'Object for relation not found', 400
         relation_objects.remove(relation_obj)

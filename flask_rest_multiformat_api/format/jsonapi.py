@@ -18,11 +18,10 @@ class JsonApiFormater():
             data_dict = deepcopy(DATA_BASE_DICT)
             link_dict = deepcopy(links)
             data_dict["attributes"] = _orm_obj_dict
-            data_dict["id"] = _orm_obj_dict.get('id')
+            print("-"*200)
+            print(_orm_obj_dict)
+            data_dict["id"] = _orm_obj_dict.pop('id')
             data_dict["type"] = type
-            link_dict['self'] = "{}{}{}".format(link_dict['self'].split("<")[0],
-                                                link_dict['self'].split(">")[1],
-                                                _orm_obj_dict.get('id'))
             data_dict["links"] = link_dict
             return data_dict
         if isinstance(orm_obj__dict, list):

@@ -39,3 +39,10 @@ class InvalidDataError(ApiError):
         title = title or "Invalid data"
         detail = detail
         super().__init__(detail, title=title, status="400", code=400)
+
+
+class PermissionNotAllowedError(ApiError):
+    def __init__(self, detail, title=""):
+        title = title or "permission not allowed"
+        detail = detail
+        super().__init__(detail, title=title, status="403", code=403)

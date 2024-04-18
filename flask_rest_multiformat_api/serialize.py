@@ -6,7 +6,7 @@ import datetime
 from sqlalchemy.orm import relationships
 from .format import DATA_FORMATER
 from flask import url_for, request
-
+from sqlalchemy.orm.relationships import RelationshipProperty
 
 DEFAULT_FORMATER = DATA_FORMATER['jsonapi']
 
@@ -59,7 +59,7 @@ def add_relationships(object_dict, orm_obj, model, exclude_culumn=[]):
 def apply_data_to_model(model, model_obj, data):
     for key, value in data.items():
         model_attr = getattr(model, key, None)
-        if model_attr:
+        if model_attr and not isinstance(model_attr.property, RelationshipProperty):
             setattr(model_obj, key, value) 
     return model_obj
 
