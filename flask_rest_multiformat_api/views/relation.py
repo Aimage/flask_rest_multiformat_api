@@ -1,5 +1,6 @@
 import json
-from flask import request, MethodView
+from flask import request
+from flask.views import MethodView
 from sqlalchemy.orm import Query
 from .base import BaseView
 from ..queries import get_single, get_many
