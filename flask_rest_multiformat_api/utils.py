@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationships, properties
 import inspect
 import json
 import datetime
+from .log import logger
 
 
 def get_attr_names(model):
@@ -46,7 +47,7 @@ def validate_filters(filters):
 def loads_filters(request):
     filter_dict = []
     filters = request.args.get('filters', None)
-    print('filers: ', filters)
+    logger.info(f"filters: {filters}")
     if filters and isinstance(filters, str):
         filter_dict = json.loads(filters)
     return filter_dict
@@ -58,21 +59,23 @@ def keep_colum_relationship(model, attr_names):
         model_attr = getattr(model, attr_name, None)
         if not hasattr(model_attr, 'property'):
             continue
-        if isinstance(model_attr.property, relationships.RelationshipProperty) or \
-            isinstance(model_attr.property, properties.ColumnProperty):
+        if isinstance(model_attr.property,
+                      relationships.RelationshipProperty) or isinstance(
+                          model_attr.property, properties.ColumnProperty):
             new_attr_names.append(attr_name)
     return new_attr_names
-            
+
 
 def get_class_atributes(model):
-#     attributes = inspect.getmembers(model, lambda a:not(inspect.isroutine(a)))
-    # [('a', '34'), ('b', '12')]
     exclude_attr = ['metadata', 'query', 'query_class']
     attributes = [i for i in dir(model) if not callable(i)]
-#     print('ATTRIBUTES: ', attributes)
-    attributes = [a for a in attributes if not(a.startswith('__') and a.endswith('__'))]
-    attributes = [a for a in attributes if not(a.startswith('_sa_')) and not a.startswith('_decl_')]
+    attributes = [
+        a for a in attributes if not (a.startswith('__') and a.endswith('__'))
+    ]
+    attributes = [
+        a for a in attributes
+        if not (a.startswith('_sa_')) and not a.startswith('_decl_')
+    ]
     attributes = [a for a in attributes if a not in exclude_attr]
     attributes = keep_colum_relationship(model, attributes)
-#     print("FINAL_ATRRIB:", attributes)
     return attributes

@@ -4,6 +4,7 @@ from ..serialize import serialise, apply_data_to_model
 from ..utils import build_filter, loads_filters
 from ..queries import get_single, get_many
 from .base import BaseView
+from ..log import logger
 
 
 class ModelListView(BaseView):
@@ -22,7 +23,7 @@ class ModelListView(BaseView):
     def get(self, *args, **kwargs):
         self.before_get(*args, **kwargs)
         orm_objs = self.get_objects(*args, **kwargs)
-        print("RESULT: ", orm_objs, " -END RESULT")
+        logger.debug(f"get collection result:  {orm_objs} ")
         page_number = request.args.get('page', 0)
         orm_objs_json = serialise(
             orm_objs,
@@ -35,7 +36,7 @@ class ModelListView(BaseView):
         code = 201
         data = self.data_formater.parse_data(request.data)
         self.before_post(data, *args, **kwargs)
-        print("DATA: ", data)
+        logger.info(f"Parsed POST DATA: {data}")
         model_obj = self.create_object(data, *args, **kwargs)
         self.after_create_object(model_obj, *args, **kwargs)
         response = serialise(model_obj, self)

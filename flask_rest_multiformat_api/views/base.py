@@ -42,8 +42,6 @@ class BaseView(MethodView):
 
     def dispatch_request(self, *args, **kwargs):
         meth = getattr(self, request.method.lower(), None)
-        print('meth :', meth)
-        #         print('methodes: ', lower_methods,request.method.lower() )
         # If the request method is HEAD and we don't have a handler for it
         # retry with GET.
         if meth is None and request.method == 'HEAD':

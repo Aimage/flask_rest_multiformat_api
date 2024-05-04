@@ -4,6 +4,7 @@ from ..errors import ObjectNotFoundError
 from .base import BaseView
 from ..queries import get_single
 from ..serialize import serialise, apply_data_to_model
+from ..log import logger
 
 
 class ModelDetailView(BaseView):
@@ -15,10 +16,10 @@ class ModelDetailView(BaseView):
         return model_object
 
     def get(self, *args, **kwargs):
-        print(args, kwargs)
         orm_obj = self.get_object(*args, **kwargs)
         if not orm_obj:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
+            logger.warning(f"Object not found {kwargs.get('id')}")
             raise ApiException([error], 404)
         orm_obj_json = serialise(orm_obj, self)
         return self.data_formater.create_response(orm_obj_json, 200)
@@ -26,9 +27,10 @@ class ModelDetailView(BaseView):
     def update(self, *args, **kwargs):
         code = 201
         model_obj = self.get_object(*args, **kwargs)
-        #         print("MODEL OBJ: ", model_obj)
+        logger.debug(f"Updating model: {model_obj}")
         if model_obj is None:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
+            logger.warning(f"{self.type} with id {kwargs.get('id')} not found")
             raise ApiException([error], 404)
 
         model_obj = self.before_update_object(model_obj, *args, **kwargs)

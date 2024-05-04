@@ -18,8 +18,6 @@ class JsonApiFormater():
             data_dict = deepcopy(DATA_BASE_DICT)
             link_dict = deepcopy(links)
             data_dict["attributes"] = _orm_obj_dict
-            print("-"*200)
-            print(_orm_obj_dict)
             data_dict["id"] = _orm_obj_dict.pop('id')
             data_dict["type"] = type
             data_dict["links"] = link_dict

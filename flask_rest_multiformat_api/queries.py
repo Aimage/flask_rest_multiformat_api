@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 
 from .utils import get_attr_names, get_primary_key_name
+from .log import logger
 
 
 def build_base_query(session, model):
     query = session.query(model)
-    return query 
+    return query
 
 
 def paginate(query, number_par_page, page_number):
-    "we count page from 0"
+    """we count page from 0"""
     offset_ = number_par_page * int(page_number)
     query = query.limit(number_par_page).offset(offset_)
     return query
 
 
 def get_single(session, model, id):
-    print("MODEL: ", model, " -session: ", session, " ID: ", id)
+    logger.debug(f"MODEL: {model} -session: {session} ID:  {id}")
     primary_kay_name = get_primary_key_name(model)
     primary_key_attrib = getattr(model, primary_kay_name)
     query = session.query(model)
@@ -53,12 +54,18 @@ def apply_order(query, model, order_by, order):
     if attrib:
         if order == '1':
             query = query.order_by(attrib.desc())
-        else :
+        else:
             query = query.order_by(attrib)
     return query
 
 
-def get_many(session, model, filters=[], order_by='', order='', number_par_page=50, page_number=0):
+def get_many(session,
+             model,
+             filters=[],
+             order_by='',
+             order='',
+             number_par_page=50,
+             page_number=0):
     query = build_base_query(session, model)
     query = apply_filters(query, model, filters)
     if order_by:
