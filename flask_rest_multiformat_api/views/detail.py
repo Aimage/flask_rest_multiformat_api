@@ -37,8 +37,9 @@ class ModelDetailView(BaseView):
 
         data = self.data_formater.parse_data(request.data)
         self.schema().validate(data, many=False, session=self.session)
-        model_obj = apply_data_to_model(
-            self.model, model_obj, data) if isinstance(data, dict) else data
+        model_obj = self.schema().load(data, many=False, session=self.session)
+        # model_obj = apply_data_to_model(
+        #     self.model, model_obj, data) if isinstance(data, dict) else data
         self.session.commit()
         response = serialise(model_obj, self)
         return self.data_formater.create_response(response, code)

@@ -21,4 +21,4 @@ def date_format_validator_fr(str):
 
 def fr_date_str_to_date(date_str):
     date = datetime.datetime.strptime(date_str, '%d-%m-%Y %H:%M:%S') if date_format_validator_fr(date_str) else None
-    return date 
+    return date
