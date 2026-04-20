@@ -14,21 +14,24 @@ class ModelListView(BaseView):
         filters_dict = loads_filters(request)
         order = request.args.get('sort', '')
         order_by = request.args.get('sort_by', '')
-        number_par_page = request.args.get('per_page', 50)
+        number_per_page = request.args.get('per_page', 50)
+        number_per_page = int(number_per_page) if isinstance(number_per_page, str) and number_per_page.isdigit() else number_per_page
         page_number = request.args.get('page', 0)
+        page_number = int(page_number) if isinstance(page_number, str) and page_number.isdigit() else page_number
         model_objects = get_many(self.session, self.model, filters_dict,
-                                 order_by, order, number_par_page, page_number)
+                                 order_by, order, number_per_page, page_number)
         return model_objects
 
     def get(self, *args, **kwargs):
         self.before_get(*args, **kwargs)
-        orm_objs = self.get_objects(*args, **kwargs)
+        orm_objs, total_page = self.get_objects(*args, **kwargs)
         logger.debug(f"get collection result:  {orm_objs} ")
         page_number = request.args.get('page', 0)
         orm_objs_json = serialise(
             orm_objs,
             self,
             page_number=page_number,
+            total_page=total_page,
         )
         return orm_objs_json, 200
 

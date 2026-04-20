@@ -2,6 +2,7 @@
 
 from .utils import get_attr_names, get_primary_key_name
 from .log import logger
+from math import ceil
 
 
 def build_base_query(session, model):
@@ -12,7 +13,8 @@ def build_base_query(session, model):
 def paginate(query, number_par_page, page_number):
     """we count page from 0"""
     offset_ = number_par_page * int(page_number)
-    query = query.limit(number_par_page).offset(offset_)
+    # query = query.limit(number_par_page).offset(offset_)
+    query = query.offset(offset_)
     return query
 
 
@@ -71,4 +73,6 @@ def get_many(session,
     if order_by:
         query = apply_order(query, model, order_by, order)
     query = paginate(query, number_par_page, page_number)
-    return query.all()
+    total_page = ceil(query.count()/number_par_page)
+    query = query.limit(number_par_page)
+    return query.all(), total_page

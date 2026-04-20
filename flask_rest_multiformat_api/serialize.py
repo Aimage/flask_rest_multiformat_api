@@ -65,16 +65,17 @@ def apply_data_to_model(model, model_obj, data):
 
 
 
-def build_dict_response(orm_obj__dict, data_formater, page_number, **kwargs):
+def build_dict_response(orm_obj__dict, data_formater, page_number, total_page, **kwargs):
     result_dict = RESULT_BASE_DICT
     result_dict['data'] = data_formater.build_data_dict(orm_obj__dict, **kwargs)
     if isinstance(orm_obj__dict, list):
         result_dict['count'] = len(orm_obj__dict)
         result_dict['page'] = page_number
+        result_dict['total_page'] = total_page
     return result_dict
 
 
-def serialise(orm_obj, view, page_number=0):
+def serialise(orm_obj, view, page_number=0, total_page=0):
     Schema = view.schema
     model_schema = Schema(many=True) if isinstance(orm_obj, list) else Schema()
     self_url = request.url if isinstance(orm_obj, list) else f"/{view.type}/{orm_obj.id}"
@@ -82,9 +83,9 @@ def serialise(orm_obj, view, page_number=0):
     data_formater = view.data_formater
     kwargs = {
                 "type": view.type,
-                "links": {"self": self_url}
+                "links": {"self": self_url},
             }
-    result_dict = build_dict_response(orm_obj__dict, data_formater, page_number, **kwargs)
+    result_dict = build_dict_response(orm_obj__dict, data_formater, page_number, total_page, **kwargs)
     formated_response = data_formater.format_response(result_dict)
     return formated_response
 
