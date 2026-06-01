@@ -22,6 +22,7 @@ class ModelDetailView(BaseView):
             logger.warning(f"Object not found {kwargs.get('id')}")
             raise ApiException([error], 404)
         orm_obj_json = serialise(orm_obj, self)
+        self.after_get_object(orm_obj, *args, **kwargs)
         return self.data_formater.create_response(orm_obj_json, 200)
 
     def update(self, *args, **kwargs):
@@ -37,7 +38,8 @@ class ModelDetailView(BaseView):
 
         data = self.data_formater.parse_data(request.data)
         self.schema().validate(data, many=False, session=self.session)
-        model_obj = self.schema().load(data, many=False, session=self.session)
+        partial = request.method == "PATCH"
+        model_obj = self.schema().load(data, instance=model_obj, many=False, session=self.session, partial=partial)
         # model_obj = apply_data_to_model(
         #     self.model, model_obj, data) if isinstance(data, dict) else data
         self.session.commit()
@@ -71,6 +73,9 @@ class ModelDetailView(BaseView):
         return orm_obj
 
     def before_get_object(self, orm_obj, *args, **kwargs):
+        pass
+
+    def after_get_object(self, orm_obj, *args, **kwargs):
         pass
 
     def before_get_put(self, object, *args, **kwargs):
