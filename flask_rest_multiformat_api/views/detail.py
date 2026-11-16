@@ -1,14 +1,17 @@
-from flask_rest_multiformat_api.exceptions import ApiException
 from flask import request
-from ..errors import ObjectNotFoundError
-from .base import BaseView
-from ..queries import get_single
-from ..serialize import serialise, apply_data_to_model
+from sqlalchemy.exc import IntegrityError
+
+from flask_rest_multiformat_api.exceptions import ApiException
+
+from ..errors import DataIntegrityError, ObjectNotFoundError
 from ..log import logger
+from ..queries import get_single
+from ..serialize import serialise
+from .base import BaseView
 
 
 class ModelDetailView(BaseView):
-    allowed_methods = ['GET', 'PUT', 'PATCH', 'DELETE']
+    allowed_methods = ["GET", "PUT", "PATCH", "DELETE"]
 
     def get_object(self, *args, **kwargs):
         id = kwargs.get("id")
@@ -39,7 +42,9 @@ class ModelDetailView(BaseView):
         data = self.data_formater.parse_data(request.data)
         self.schema().validate(data, many=False, session=self.session)
         partial = request.method == "PATCH"
-        model_obj = self.schema().load(data, instance=model_obj, many=False, session=self.session, partial=partial)
+        model_obj = self.schema().load(
+            data, instance=model_obj, many=False, session=self.session, partial=partial
+        )
         # model_obj = apply_data_to_model(
         #     self.model, model_obj, data) if isinstance(data, dict) else data
         self.session.commit()
@@ -52,16 +57,25 @@ class ModelDetailView(BaseView):
         if not orm_obj:
             error = ObjectNotFoundError(self.model, kwargs.get("id"))
             raise ApiException([error], 404)
-        self.session.delete(orm_obj)
-        self.session.commit()
+        try:
+            self.session.delete(orm_obj)
+            self.session.commit()
+        except IntegrityError as e:
+            error = DataIntegrityError(
+                "Cannot delete this resource because it is referenced by other objects."
+            )
+            logger.warning(str(e))
+            raise ApiException([error], 409)
         self.after_delete_object(orm_obj, *args, **kwargs)
-        return '', 202
+        return "", 202
 
     def put(self, *args, **kwargs):
         return self.update(*args, **kwargs)
 
     def patch(self, *args, **kwargs):
-        return self.update(*args, **kwargs)
+        response = self.update(*args, **kwargs)
+        self.after_patch(*args, **kwargs)
+        return response
 
     def before_delete_object(self, orm_obj, *args, **kwargs):
         return orm_obj
@@ -78,8 +92,11 @@ class ModelDetailView(BaseView):
     def after_get_object(self, orm_obj, *args, **kwargs):
         pass
 
-    def before_get_put(self, object, *args, **kwargs):
+    def before_put(self, object, *args, **kwargs):
         pass
 
-    def before_get_patch(self, object, *args, **kwargs):
+    def before_patch(self, object, *args, **kwargs):
+        pass
+
+    def after_patch(self, *args, **kwargs):
         pass

@@ -46,3 +46,8 @@ class PermissionNotAllowedError(ApiError):
         title = title or "permission not allowed"
         detail = detail
         super().__init__(detail, title=title, status="403", code=403)
+
+
+class DataIntegrityError(ApiError):
+    def __init__(self, detail, title="Data integrity error"):
+        super().__init__(detail, title=title, status="409", code=409)
